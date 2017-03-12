@@ -1,0 +1,22 @@
+<launch>
+    <!-- Start tilt joint controller -->
+    <rosparam file="$(find dynamixel_driver)/config/motors.yaml" command="load"/>
+
+    <node name="dxl_controller_spawner1" pkg="dynamixel_controllers" type="controller_spawner.py"
+          args="--manager=dxl_manager
+                --port dxl_port
+                spindar_controller"
+          output="screen"/>
+
+      <node name="dxl_controller_spawner2" pkg="dynamixel_controllers" type="controller_spawner.py"
+      args="--manager=dxl_manager
+            --port dxl_port
+            pan_controller"
+      output="screen"/>
+
+    <node name="dxl_controller_spawner3" pkg="dynamixel_controllers" type="controller_spawner.py"
+          args="--manager=dxl_manager
+                --port dxl_port
+                tilt_controller"
+          output="screen"/>
+</launch>
