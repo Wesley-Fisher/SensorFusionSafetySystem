@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="post">
+
+    <xacro:include filename="$(find post_description)/urdf/post.urdf.xacro"/>
+    
+
+    
+    <joint name="world_joint" type="fixed">
+    	<origin xyz="0 0 0" rpy="0 0 0"/>
+    	<parent link="world"/>
+    	<child link="post_base"/>
+    </joint>
+	
+	<link name="world"/>
+
+
+	<gazebo>
+  		<plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+    	<robotNamespace>/post</robotNamespace>
+  		</plugin>
+	</gazebo>
+
+</robot>

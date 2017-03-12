@@ -1,0 +1,13 @@
+
+<launch>
+
+  <arg name="robot_description" default="robot_description"/>
+
+  <!-- Load universal robot description format (URDF) -->
+  <param name="robot_description" command="$(find xacro)/xacro.py '$(find post_description)/urdf/post_robot.urdf.xacro'" />
+  <param name="robot_description_semantic" command="$(find xacro)/xacro.py '$(find post_description)/urdf/post_robot.urdf.xacro'" />
+
+
+
+
+</launch>

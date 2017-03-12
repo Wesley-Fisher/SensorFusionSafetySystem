@@ -1,0 +1,87 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="post">
+
+
+
+    <xacro:include filename="$(find post_description)/urdf/xtion.urdf.xacro"/>
+
+    <link name="post_base">
+        <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.01"/>
+        <inertia ixx="0.01"  ixy="0"  ixz="0" iyy="0.01" iyz="0" izz="0.01" />
+      </inertial>  
+      <visual>
+            <origin xyz="0 0 0.265" rpy="0 0 0"/>
+            <geometry>
+                <box size="0.05 0.05 0.53" />
+            </geometry>
+      </visual>
+      <collision>
+            <origin xyz="0 0 2.265" rpy="0 0 0"/>
+            <geometry>
+                <box size="0.05 0.05 0.53" />
+            </geometry>
+      </collision> 
+    </link>
+
+    <!--
+    <xacro:pan_tilt_camera name="test" base="post_base">
+        <origin xyz="0 0 0.53" rpy="0 0 0"/>
+        <axis xyz="1 0 0"/>
+    </xacro:pan_tilt_camera>
+-->
+    <joint name="xtion_fixture_joint" type="fixed">
+        <parent link="post_base"/>
+        <child link="xtion_base"/>
+        <origin xyz="0 0 0.53" rpy="0 0 1.5707"/>
+        <axis xyz="0 0 0"/>
+    </joint> 
+
+    <joint name="spindar_joint" type="revolute">
+        <parent link="post_base"/>
+        <child link="spindar_base"/>
+        <origin xyz="0 0 0.435" rpy="0 0 0"/>
+        <axis xyz="1 0 0"/>
+        <limit effort="1.0" velocity="1.0" lower="-3.1415" upper="3.1415"/>
+    </joint>
+
+    <link name="spindar_base">
+    </link>
+
+    <joint name="spindar_pos" type="fixed">
+        <parent link="spindar_base"/>
+        <child link="laser"/>
+        <origin xyz="0.07 0 0.03" rpy="0 0 0"/>
+        <axis xyz="1 0 0"/>
+    </joint>
+
+    <link name="laser">
+        <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.01"/>
+        <inertia ixx="0.01"  ixy="0"  ixz="0" iyy="0.01" iyz="0" izz="0.01" />
+      </inertial>  
+      <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <box size="0.05 0.05 0.1" />
+            </geometry>
+      </visual>
+      <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <box size="0.05 0.05 0.1" />
+            </geometry>
+      </collision> 
+    </link>
+    
+
+    <gazebo>
+        <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+        <robotNamespace>/centaur</robotNamespace>
+        </plugin>
+    </gazebo>
+
+    
+</robot>

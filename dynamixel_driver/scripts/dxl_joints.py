@@ -35,7 +35,7 @@ class DXLJointManager():
 
         
 
-        $ dynmaixel_msgs/JointState
+        self.spin_sub = rospy.Subscriberdynmaixel_msgs/JointState
 
     def main(self):
         while not rospy.is_shutdown():
