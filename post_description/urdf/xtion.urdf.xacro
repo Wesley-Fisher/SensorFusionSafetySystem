@@ -69,7 +69,7 @@
         <origin xyz="0 0 0.045" rpy="0 0 0"/>
         <parent link="xtion_inter_link"/>
         <child link="xtion_proto_link"/>
-        <axis xyz=" 1 0 0"/>
+        <axis xyz=" -1 0 0"/>
         <limit effort="1.0" velocity="1.0" lower="-3.1415" upper="3.1415"/>
     </joint>
     
