@@ -38,7 +38,7 @@
         <axis xyz="0 0 0"/>
     </joint> 
 
-    <joint name="spindar_joint" type="revolute">
+    <joint name="lidar_rad" type="revolute">
         <parent link="post_base"/>
         <child link="spindar_base"/>
         <origin xyz="0 0 0.435" rpy="0 0 0"/>
