@@ -2,6 +2,38 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="post">
 
 
+    <transmission name="lidar_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <joint name="lidar_rad">
+        <hardwareInterface>EffortJointInterface</hardwareInterface>
+      </joint>
+      <actuator name="lidar_motor">
+        <hardwareInterface>EffortJointInterface</hardwareInterface>
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission>
+
+    <transmission name="pan_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <joint name="xtion_pan">
+        <hardwareInterface>EffortJointInterface</hardwareInterface>
+      </joint>
+      <actuator name="pan_motor">
+        <hardwareInterface>EffortJointInterface</hardwareInterface>
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission>
+
+    <transmission name="tilt_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <joint name="xtion_tilt">
+        <hardwareInterface>EffortJointInterface</hardwareInterface>
+      </joint>
+      <actuator name="tilt_motor">
+        <hardwareInterface>EffortJointInterface</hardwareInterface>
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission>
 
     <xacro:include filename="$(find post_description)/urdf/xtion.urdf.xacro"/>
 
@@ -43,7 +75,7 @@
         <child link="spindar_base"/>
         <origin xyz="0 0 0.435" rpy="0 0 0"/>
         <axis xyz="1 0 0"/>
-        <limit effort="1.0" velocity="1.0" lower="-3.1415" upper="3.1415"/>
+        <limit effort="10.0" velocity="1.0" lower="-3.1415" upper="3.1415"/>
     </joint>
 
     <link name="spindar_base">
@@ -68,20 +100,89 @@
                 <box size="0.05 0.05 0.1" />
             </geometry>
       </visual>
+      <!--
       <collision>
             <origin xyz="0 0 0" rpy="0 0 0"/>
             <geometry>
                 <box size="0.05 0.05 0.1" />
             </geometry>
       </collision> 
+  -->
     </link>
     
 
     <gazebo>
         <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
-        <robotNamespace>/centaur</robotNamespace>
+        <robotNamespace>/post</robotNamespace>
         </plugin>
     </gazebo>
+
+    <gazebo reference="camera_depth_optical_frame">
+      <sensor name="xtion" type="depth">
+          <plugin name="camera_controller" filename="libgazebo_ros_openni_kinect.so">
+            <baseline>0.2</baseline>
+            <alwaysOn>true</alwaysOn>
+            <updateRate>1.0</updateRate>
+            <cameraName>camera_ir</cameraName>
+            <imageTopicName>/camera/depth/image_raw</imageTopicName>
+            <cameraInfoTopicName>/camera/depth/camera_info</cameraInfoTopicName>
+            <depthImageTopicName>/camera/depth/image_raw</depthImageTopicName>
+            <depthImageInfoTopicName>/camera/depth/camera_info</depthImageInfoTopicName>
+            <pointCloudTopicName>/camera/depth/points</pointCloudTopicName>
+            <frameName>camera_depth_optical_frame_virtual</frameName>
+            <pointCloudCutoff>0.5</pointCloudCutoff>
+            <distortionK1>0.00000001</distortionK1>
+            <distortionK2>0.00000001</distortionK2>
+            <distortionK3>0.00000001</distortionK3>
+            <distortionT1>0.00000001</distortionT1>
+            <distortionT2>0.00000001</distortionT2>
+            <CxPrime>0</CxPrime>
+            <Cx>0</Cx>
+            <Cy>0</Cy>
+            <focalLength>0</focalLength>
+            <hackBaseline>0</hackBaseline>
+          </plugin>
+      </sensor>
+    </gazebo>
+
+    <gazebo reference="laser">
+    <sensor type="ray" name="head_hokuyo_sensor">
+      <pose>0 0 0 0 0 0</pose>
+      <visualize>true</visualize>
+      <update_rate>10</update_rate>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>720</samples>
+            <resolution>1</resolution>
+            <min_angle>-1.570796</min_angle>
+            <max_angle>1.570796</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.10</min>
+          <max>10.0</max>
+          <resolution>0.01</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <!-- Noise parameters based on published spec for Hokuyo laser
+               achieving "+-30mm" accuracy at range < 10m.  A mean of 0.0m and
+               stddev of 0.01m will put 99.7% of samples within 0.03m of the true
+               reading. -->
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </ray>
+      <plugin name="gazebo_ros_head_hokuyo_controller" filename="libgazebo_ros_laser.so">
+        <topicName>/laser</topicName>
+        <frameName>laser</frameName>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+
+
 
     
 </robot>

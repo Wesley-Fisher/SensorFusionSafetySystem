@@ -1,4 +1,7 @@
 <launch>
+
+    <include file="$(find post_description)/launch/post_upload.launch"/>
+
 	<node pkg="rviz" type="rviz" name="post_rviz" args = "-d $(find post_description)/launch/post.rviz"/>
 
 </launch>

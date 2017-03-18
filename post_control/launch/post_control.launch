@@ -1,0 +1,26 @@
+<launch>
+
+  <!-- Load joint controller configurations from YAML file to parameter server -->
+
+  <!--
+  <rosparam ns="centaur" file="$(find r12_control)/config/r12_control.yaml" command="load"/>
+  <rosparam ns="centaur" file="$(find artv_control)/config/artv_control.yaml" command="load"/>
+  -->
+
+  
+  <rosparam file="$(find post_control)/config/post_control.yaml" command="load"/>
+  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
+    output="screen"
+    ns="/post"
+    args="joint_state_controller pan_controller tilt_controller lidar_controller"/>
+	
+
+
+  <!-- convert joint states to TF transforms for rviz, etc -->
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"
+    respawn="false" output="screen">
+    <remap from="/joint_states" to="/post/joint_states" />
+  </node>
+
+
+</launch>

@@ -19,6 +19,7 @@ import dynamixel_msgs
 import sensor_msgs
 from std_msgs.msg import ColorRGBA
 from sf_msgs.msg import SFPoints
+from sf_msgs.srv import NewGoal NewGoalRequest NewGoalResponse
 
 import tf
 import moveit_msgs
@@ -70,9 +71,21 @@ class Observer():
         self.vis_sensor_pub = rospy.Publisher('/sensor_points', visualization_msgs.msg.MarkerArray,queue_size=5)
         self.point_sub = rospy.Subscriber('/observer_points_seen', SFPoints, callback=self.PointCallback)
 
+        self.goal_service = rospy.SimpleServiceServer('/observer_goal_request', NewGoal, callback=NewGoalCallback)
 
     def PointCallback(self, msg):
         self.process_queue.put(msg)
+
+    def NewGoalCallback(self, msg):
+        indices = reversed(sorted(range(len(myList)),key=lambda x:self.times[x]))
+
+        resp = NewGoalResponse()
+
+        self.tf.waitForTransform(msg.frame, self.frame, time=rospy.Time.now(), timeout=rospy.Duration(0.5))
+        for i in indices:
+            p = self.tf.transformPose(msg.frame, point)
+
+            resp.points.points.append(p)
 
     def MakeAllPoints(self):
         # Currently centered on post

@@ -4,28 +4,6 @@
   <xacro:parameter name="pi" value="3.1415"/>
 
 
-    <transmission name="xtion_pan_trans">
-      <type>transmission_interface/SimpleTransmission</type>
-      <joint name="xtion_pan">
-        <hardwareInterface>PositionJointInterface</hardwareInterface>
-      </joint>
-      <actuator name="xtion_pan_motor">
-        <hardwareInterface>PositionJointInterface</hardwareInterface>
-        <mechanicalReduction>1</mechanicalReduction>
-      </actuator>
-    </transmission>
-
-    <transmission name="xtion_tilt_trans">
-      <type>transmission_interface/SimpleTransmission</type>
-      <joint name="xtion_tilt">
-        <hardwareInterface>PositionJointInterface</hardwareInterface>
-      </joint>
-      <actuator name="xtion_tilt_motor">
-        <hardwareInterface>PositionJointInterface</hardwareInterface>
-        <mechanicalReduction>1</mechanicalReduction>
-      </actuator>
-    </transmission>
-
 
     <link name="xtion_base">
       <inertial>
@@ -47,7 +25,7 @@
         <child link="xtion_inter_link"/>
         <origin xyz="0 0 0.075" rpy="0 0 0"/>
         <axis xyz="0 0 1"/>
-        <limit effort="1.0" velocity="1.0" lower="-3.1415" upper="3.1415"/>
+        <limit effort="100.0" velocity="1.0" lower="-3.1415" upper="3.1415"/>
     </joint>
     
 
@@ -70,7 +48,7 @@
         <parent link="xtion_inter_link"/>
         <child link="xtion_proto_link"/>
         <axis xyz=" -1 0 0"/>
-        <limit effort="1.0" velocity="1.0" lower="-3.1415" upper="3.1415"/>
+        <limit effort="100.0" velocity="1.0" lower="-1.5707" upper="1.5707"/>
     </joint>
     
 
@@ -106,8 +84,17 @@
 
     <joint name="xtion_etc1" type="fixed">
         <parent link="xtion_camera_link"/>
+        <child link="camera_frame_inter_link"/>
+        <origin xyz="0 0 0.0" rpy="0 0 0"/>
+        <axis xyz="0 0 1"/>
+    </joint>
+
+    <link name="camera_frame_inter_link"/>
+
+    <joint name="xtion_etc2" type="fixed">
+        <parent link="camera_frame_inter_link"/>
         <child link="camera_depth_optical_frame"/>
-        <origin xyz="0 0 0.0" rpy="1.5707 3.1415 0"/>
+        <origin xyz="0 0 0.0" rpy="0 0 -1.5707"/>
         <axis xyz="0 0 1"/>
     </joint>
 
@@ -118,6 +105,17 @@
         <inertia ixx="0.01"  ixy="0"  ixz="0" iyy="0.01" iyz="0" izz="0.01" />
       </inertial>
     </link>
+
+    <joint name="camera_optical_joint" type="fixed">
+    <!-- these values have to be these values otherwise the gazebo camera
+        image won't be aligned properly with the frame it is supposedly
+        originating from -->
+    <origin xyz="0 0 0" rpy="-1.5707 0 -1.5707"/>
+    <parent link="camera_depth_optical_frame"/>
+    <child link="camera_depth_optical_frame_virtual"/>
+  </joint>
+
+    <link name="camera_depth_optical_frame_virtual"/>
 
 <!--
     <gazebo reference="xtion_camera_link">
