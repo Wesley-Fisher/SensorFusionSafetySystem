@@ -6,7 +6,7 @@ import time
 import matplotlib.pyplot as plt
 import Queue
 
-
+import std_msgs
 from std_msgs.msg import Header
 from std_msgs.msg import String
 from shape_msgs.msg import SolidPrimitive
@@ -23,7 +23,7 @@ from sensor_msgs.msg import PointCloud2
 from std_msgs.msg import ColorRGBA
 from sensor_msgs.msg import LaserScan
 from sf_msgs.msg import SFPoints
-from sf_msgs.srv import NewGoal NewGoalRequest NewGoalResponse
+from sf_msgs.srv import NewGoal, NewGoalRequest, NewGoalResponse
 
 import tf
 import moveit_msgs
@@ -64,16 +64,16 @@ class LidarMonitor():
         self.angle_tol = 0.1
 
 
-        self.point_sub = rospy.Subscriber('todo', LaserScan, callback=self.LaserCloudCallback)
+        self.point_sub = rospy.Subscriber('/laser', LaserScan, callback=self.LaserCallback)
         self.point_pub = rospy.Publisher('/observer_points_seen', SFPoints, queue_size=5)
 
-        self.joint_sub = rospy.Subscriber('/joint_states', JointState, callback=JointCallback)
+        self.joint_sub = rospy.Subscriber('/post/joint_states', JointState, callback=self.JointCallback)
 
         self.goal_srv = rospy.ServiceProxy('/observer_goal_request', NewGoal)
 
-        self.motor_pub = rospy.Publisher(TODO)
+        self.motor_pub = rospy.Publisher('/post/lidar_controller/command', std_msgs.msg.Float64, queue_size=5)
 
-    def PointCloudCallback(self, msg):
+    def LaserCallback(self, msg):
         if not self.processing:
             self.last_scan = msg
             self.have_new_scan = True
@@ -81,17 +81,17 @@ class LidarMonitor():
     def JointCallback(self, msg):
         for n, p in zip(msg.name, msg.position):
 
-            if n == 'xtion_tilt':
-                self.last_tilt_angle = p
-
-            if n == 'xtion_pan':
-                self.last_pan_angle = p
+            if n == 'lidar_rad':
+                self.last_angle = p
 
     def CheckAngles(self):
-        dp = self.last_pan_angle - self.goal_pan
-        dt = self.last_tilt_angle - self.goal_tilt
+        dp = self.last_angle - self.goal_angle
 
-        da = dp*dp + dt*dt
+        print("Angles (L,G) = %f, %f" % (self.last_angle, self.goal_angle))
+
+        da = dp*dp
+
+        #print(da)
 
         if da < self.angle_tol:
             self.RequestNewGoal()
@@ -99,21 +99,30 @@ class LidarMonitor():
     def RequestNewGoal(self):
 
         req = NewGoalRequest()
+        
+        req.frame.data = 'lidar_base'
+
+        print(req)
 
         points = self.goal_srv(req)
 
         point = None
 
-        for p in points.points:
+        for p in points.points.points:
 
             # Check reachability condition
-            point = p
-            break
+            
+            if p.pose.position.y > 0.1:
+                point = p
+                break
 
         if point is not None:
-            self.goal_angle = 0 TODO
+            print("New Goal")
+            self.goal_angle = math.atan2(p.pose.position.z, p.pose.position.y)
 
             self.motor_pub.publish(self.goal_angle)
+        else:
+            print("No New Goal")
 
 
 
@@ -142,11 +151,12 @@ class LidarMonitor():
             for j in range(-self.offset, self.offset):
 
                 r = self.last_scan.ranges[i+j]
-                ang = self.last_scan.angle_min + (i+j)*self.last_scan.diff_angle
+                ang = self.last_scan.angle_min + (i+j)*self.last_scan.angle_increment
 
                 x = r * math.cos(ang)
                 y = r * math.sin(ang)
                 z = 0
+
 
                 if (x != x) or (y != y) or (z != z):
                     detected_nans = detected_nans + 1
@@ -156,9 +166,9 @@ class LidarMonitor():
                 else:
                     good_points = good_points + 1
 
-                    avg_x = avg_x + 1
-                    avg_y = avg_y + 1
-                    avg_z = avg_z + 1
+                    avg_x = avg_x + x
+                    avg_y = avg_y + y
+                    avg_z = avg_z + z
 
 
             if kernel_is_good:
@@ -175,8 +185,11 @@ class LidarMonitor():
 
 
     def main(self):
+        self.motor_pub.publish(std_msgs.msg.Float64(self.goal_angle))
+
         while not rospy.is_shutdown():
             time.sleep(0.1)
+            self.motor_pub.publish(std_msgs.msg.Float64(self.goal_angle))
 
             if self.have_new_scan:
                 self.ProcessPoints()

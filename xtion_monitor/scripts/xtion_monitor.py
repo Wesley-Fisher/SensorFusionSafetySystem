@@ -45,8 +45,8 @@ class XtionMonitor():
 
         self.timeout = 5.0
 
-        self.cloud_width = 640
-        self.cloud_height = 480
+        self.cloud_width = 320
+        self.cloud_height = 240
 
 
         self.kernel_size = 11 #make it odd
@@ -114,6 +114,7 @@ class XtionMonitor():
                 avg_z = 0
 
                 for index in indices:
+                    
                     p = points[index]
 
                     if (p.x != p.x) or (p.y != p.y) or (p.z != p.z):
@@ -131,7 +132,7 @@ class XtionMonitor():
                 if kernel_is_good:
 
                     pose = PoseStamped()
-                    pose.header.frame_id = 'camera_depth_optical_frame'
+                    pose.header.frame_id = 'camera_depth_optical_frame_virtual'
                     pose.pose.position.x = avg_x / good_points
                     pose.pose.position.y = avg_y / good_points
                     pose.pose.position.z = avg_z / good_points

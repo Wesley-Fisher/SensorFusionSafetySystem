@@ -19,7 +19,7 @@ import dynamixel_msgs
 import sensor_msgs
 from std_msgs.msg import ColorRGBA
 from sf_msgs.msg import SFPoints
-from sf_msgs.srv import NewGoal NewGoalRequest NewGoalResponse
+from sf_msgs.srv import NewGoal, NewGoalRequest, NewGoalResponse
 
 import tf
 import moveit_msgs
@@ -71,21 +71,23 @@ class Observer():
         self.vis_sensor_pub = rospy.Publisher('/sensor_points', visualization_msgs.msg.MarkerArray,queue_size=5)
         self.point_sub = rospy.Subscriber('/observer_points_seen', SFPoints, callback=self.PointCallback)
 
-        self.goal_service = rospy.SimpleServiceServer('/observer_goal_request', NewGoal, callback=NewGoalCallback)
+        self.goal_service = rospy.Service('/observer_goal_request', NewGoal, self.NewGoalCallback)
 
     def PointCallback(self, msg):
         self.process_queue.put(msg)
 
     def NewGoalCallback(self, msg):
-        indices = reversed(sorted(range(len(myList)),key=lambda x:self.times[x]))
+        indices = reversed(sorted(range(len(self.points)),key=lambda x:self.times[x]))
 
         resp = NewGoalResponse()
 
-        self.tf.waitForTransform(msg.frame, self.frame, time=rospy.Time.now(), timeout=rospy.Duration(0.5))
+        self.tf.waitForTransform(msg.frame.data, self.frame, time=rospy.Time.now(), timeout=rospy.Duration(0.5))
         for i in indices:
-            p = self.tf.transformPose(msg.frame, point)
+            p = self.tf.transformPose(msg.frame.data, self.points[i])
 
             resp.points.points.append(p)
+
+        return resp
 
     def MakeAllPoints(self):
         # Currently centered on post
@@ -245,6 +247,7 @@ class Observer():
             yaw = math.atan2(y, x)
             r = math.sqrt(x*x + y*y)
             pitch = -math.atan2(z, r)
+
 
             if (pitch != pitch) or (yaw != yaw):
                 print(p)
