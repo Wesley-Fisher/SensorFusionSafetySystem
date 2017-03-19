@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import Queue
 
 
+import std_msgs
 from std_msgs.msg import Header
 from std_msgs.msg import String
 from shape_msgs.msg import SolidPrimitive
@@ -21,6 +22,7 @@ import sensor_msgs.point_cloud2
 from sensor_msgs.msg import PointCloud2
 from std_msgs.msg import ColorRGBA
 from sf_msgs.msg import SFPoints
+from sf_msgs.srv import NewGoal, NewGoalRequest, NewGoalResponse
 
 import tf
 import moveit_msgs
@@ -37,8 +39,8 @@ class XtionMonitor():
     def __init__(self):
         rospy.init_node('xtion_monitor')
 
+        self.loop_del = 0.2
 
-        # Wait for MoveIt!
         self.last_scan = None
         self.have_new_scan = False
         self.processing = False
@@ -59,10 +61,98 @@ class XtionMonitor():
         self.point_sub = rospy.Subscriber('/camera/depth/points', PointCloud2, callback=self.PointCloudCallback)
         self.point_pub = rospy.Publisher('/observer_points_seen', SFPoints, queue_size=5)
 
+
+        self.joint_sub = rospy.Subscriber('/post/joint_states', JointState, callback=self.JointCallback)
+
+        self.goal_srv = rospy.ServiceProxy('/observer_goal_request', NewGoal)
+
+        self.last_pan = 0
+        self.last_tilt = 0
+
+        self.pan_goal = 0
+        self.tilt_goal = 0
+
+        self.angle_tol = 0.1
+
+        self.pan_pub = rospy.Publisher('/post/pan_controller/command', std_msgs.msg.Float64, queue_size=5)
+        self.tilt_pub = rospy.Publisher('/post/tilt_controller/command', std_msgs.msg.Float64, queue_size=5)
+
+
     def PointCloudCallback(self, msg):
         if not self.processing:
             self.last_scan = msg
             self.have_new_scan = True
+
+    def JointCallback(self, msg):
+        for n, p in zip(msg.name, msg.position):
+
+            if n == 'xtion_pan':
+                self.last_pan = p
+
+            if n == 'xtion_tilt':
+                self.last_tilt = p
+
+
+    def CheckAngles(self):
+        dt = self.last_tilt - self.tilt_goal
+        dp = self.last_pan - self.pan_goal
+
+        da = dp*dp +  dt*dt
+
+        print(da)
+        print("Pan (L,G) = %f, %f" % (self.last_pan, self.pan_goal))
+        print("Tilt (L,G) = %f, %f" % (self.last_tilt, self.tilt_goal))
+
+
+        if da < self.angle_tol:
+            self.RequestNewGoal()
+
+    def RequestNewGoal(self):
+
+        req = NewGoalRequest()
+        
+        req.frame.data = 'xtion_base'
+
+        #print(req)
+
+        points = self.goal_srv(req)
+        #print(points)
+
+        #print(points)
+        point = None
+
+        for p in points.points.points:
+
+
+            # Check reachability condition
+            x = p.pose.position.x
+            y = p.pose.position.y
+            
+            if x*x + y*y > 0.05:
+                point = p
+                break
+
+        if point is not None:
+
+            print(point)
+            
+            x = -p.pose.position.y
+            y = p.pose.position.x
+            z = p.pose.position.z
+
+            r = math.sqrt(x*x + y*y)
+
+            self.tilt_goal = math.atan2(z, r)
+            self.pan_goal = math.fmod(math.atan2(y, x), 3.1415)
+
+            print("New Goal")
+            #print(point)
+            print("P, T = %f, %f" % (self.pan_goal, self.tilt_goal))
+
+            self.pan_pub.publish(self.pan_goal)
+            self.tilt_pub.publish(self.tilt_goal)
+        else:
+            print("No New Goal")
 
     def GetIndicesInKernel(self, base_row, base_col):
 
@@ -148,11 +238,17 @@ class XtionMonitor():
         self.processing = False
 
     def main(self):
+        self.pan_pub.publish(self.pan_goal)
+        self.tilt_pub.publish(self.tilt_goal)
+
         while not rospy.is_shutdown():
-            time.sleep(0.1)
+            time.sleep(self.loop_del)
+            self.pan_pub.publish(self.pan_goal)
+            self.tilt_pub.publish(self.tilt_goal)
 
             if self.have_new_scan:
                 self.ProcessPoints()
+                self.CheckAngles()
 
 
 if __name__ == "__main__":

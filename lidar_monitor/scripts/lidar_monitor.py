@@ -40,8 +40,8 @@ class LidarMonitor():
     def __init__(self):
         rospy.init_node('lidar_monitor')
 
+        self.loop_del = 0.2
 
-        # Wait for MoveIt!
         self.last_scan = None
         self.have_new_scan = False
         self.processing = False
@@ -112,13 +112,14 @@ class LidarMonitor():
 
             # Check reachability condition
             
-            if p.pose.position.y > 0.1:
+            if p.pose.position.x > 0.2:
                 point = p
                 break
 
         if point is not None:
+            print(point)
             print("New Goal")
-            self.goal_angle = math.atan2(p.pose.position.z, p.pose.position.y)
+            self.goal_angle = math.fmod(math.atan2(p.pose.position.z,p.pose.position.y)+3.1415, 3.1415)
 
             self.motor_pub.publish(self.goal_angle)
         else:
@@ -188,7 +189,7 @@ class LidarMonitor():
         self.motor_pub.publish(std_msgs.msg.Float64(self.goal_angle))
 
         while not rospy.is_shutdown():
-            time.sleep(0.1)
+            time.sleep(self.loop_del)
             self.motor_pub.publish(std_msgs.msg.Float64(self.goal_angle))
 
             if self.have_new_scan:

@@ -6,7 +6,7 @@ import time
 import matplotlib.pyplot as plt
 import Queue
 
-
+import std_msgs
 from std_msgs.msg import Header
 from std_msgs.msg import String
 from shape_msgs.msg import SolidPrimitive
@@ -50,7 +50,7 @@ class Observer():
 
         self.length = 2.0 #forward, x
         self.width = 1.5 #side, y
-        self.height = 1 # up, z
+        self.height = 0.8 # up, z
 
         self.num_length = 4
         self.num_width = 3
@@ -58,11 +58,13 @@ class Observer():
 
         self.color_map = plt.get_cmap('jet')
 
-        self.timeout = 15.0
+        self.timeout = 25.0
 
-        self.angle_threshold = 0.2
+        self.angle_threshold = 0.3
 
         self.process_queue = Queue.Queue()
+
+        self.ir_queue = Queue.Queue()
 
         self.MakeAllPoints()
         print("Created Points")
@@ -73,28 +75,53 @@ class Observer():
 
         self.goal_service = rospy.Service('/observer_goal_request', NewGoal, self.NewGoalCallback)
 
+        self.overtime_pub = rospy.Publisher('observer_overtime', std_msgs.msg.Float64, queue_size=5)
+
+        self.ir_override_sub = rospy.Subscriber('/observer_points_override', PoseStamped, callback=self.IRPointCallback)
+
     def PointCallback(self, msg):
         self.process_queue.put(msg)
 
+    def IRPointCallback(self, msg):
+        self.ir_queue.put(msg)
+
     def NewGoalCallback(self, msg):
-        indices = reversed(sorted(range(len(self.points)),key=lambda x:self.times[x]))
+        times = [t.to_sec() for t in self.times]
+
+        #indices = [i[0] for i in sorted(enumerate(times), key=lambda x:x[1])]
+        indices = sorted(range(len(times)), key=lambda k: times[k])
+        #print(indices)
+
+        #print(indices)
+
+        #indices.reverse()
+
+        #print(indices)
+        #print(times)
+        #print(self.times)
 
         resp = NewGoalResponse()
 
+        if not self.ir_queue.empty():
+                resp.points.points.append(self.ir_queue.get())
+
         self.tf.waitForTransform(msg.frame.data, self.frame, time=rospy.Time.now(), timeout=rospy.Duration(0.5))
         for i in indices:
+            #print(times[i])
             p = self.tf.transformPose(msg.frame.data, self.points[i])
 
             resp.points.points.append(p)
+
+        #print(resp)
 
         return resp
 
     def MakeAllPoints(self):
         # Currently centered on post
         
-
+        
         # Make side walls
-        for x in np.linspace(-self.length/2, self.length/2, self.num_length):
+        for x in np.linspace(0, self.length, self.num_length):
             for z in np.linspace(0, self.height, self.num_height):
                 self.CreatePoint(x, self.width/2, z)
                 self.CreatePoint(x, -self.width/2, z)
@@ -102,14 +129,15 @@ class Observer():
         # Make front/back walls
         for y in np.linspace(-self.width/2, self.width/2, self.num_width):
             for z in np.linspace(0, self.height, self.num_height):
-                self.CreatePoint(self.length/2, y, z)
-                self.CreatePoint(-self.length/2, y, z)
+                self.CreatePoint(self.length, y, z)
+                #self.CreatePoint(0, y, z)
+        '''
 
         # Make Ceiling
         for y in np.linspace(-self.width/2, self.width/2, self.num_width):
             for x in np.linspace(-self.length/2, self.length/2, self.num_length):
                 self.CreatePoint(x, y, self.height)
-
+        '''
         
 
     def CreatePoint(self, x, y, z):
@@ -187,6 +215,10 @@ class Observer():
         self.vis_pub.publish(msg)
 
     def VisualizeSensorPoints(self, sensor_msg):
+
+        if len(sensor_msg.points) < 1:
+            return
+
         msg = visualization_msgs.msg.MarkerArray()
         t_now = rospy.Time.now()
 
@@ -220,7 +252,7 @@ class Observer():
             msg.markers.append(marker)
             index = index + 1
 
-        print('Visualizing Sensor')
+        #print('Visualizing Sensor')
         self.vis_sensor_pub.publish(msg)
 
     def AngleDiff(self, a, b):
@@ -231,6 +263,12 @@ class Observer():
         return res
 
     def ProcessPoints(self, msg):
+        if len(msg.points) < 1:
+            return
+
+        base_time = rospy.Time.now()
+        max_overtime = 0
+
         target_frame = msg.points[0].header.frame_id
 
         temp_points = []
@@ -275,6 +313,10 @@ class Observer():
 
                 da = math.sqrt(temp_roll*temp_roll*0 + math.pow(self.AngleDiff(temp_pitch,pitch), 2) + math.pow(self.AngleDiff(temp_yaw, yaw), 2))
 
+                dt = (self.times[index] - base_time).to_sec()
+
+                if dt > self.timeout and dt > max_overtime:
+                    max_overtime = dt
 
                 if da < self.angle_threshold:
                     self.times[index] = rospy.Time.now()
@@ -290,7 +332,7 @@ class Observer():
 
             q = p.pose.orientation * temp_points[i].inverse()
             '''
-
+        self.overtime_pub.publish(max_overtime)
 
 
     def main(self):

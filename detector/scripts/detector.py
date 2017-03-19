@@ -76,8 +76,8 @@ class Detector():
         # Currently centered on post
         
 
-        self.CreateCollPoint(0, 0, 0, 1)
-        self.CreateClearPoint(0, 0, 0, 2, 'post_base')
+        self.CreateCollPoint(0, 0, 0, 2)
+        self.CreateClearPoint(0, 0, 0, 1, 'post_base')
         
 
     def CreateCollPoint(self, x, y, z, d):
