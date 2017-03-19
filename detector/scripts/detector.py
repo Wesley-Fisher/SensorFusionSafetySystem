@@ -51,10 +51,11 @@ class Detector():
         self.clear_ids = []
 
         self.frame = 'post_base'
-        self.floor_limit = 0.1
+        self.floor_limit = 0.5
 
         self.color_map = plt.get_cmap('jet')
         self.max_dist = 3.0
+        self.coll_dist = 5.0
 
 
         self.process_queue = Queue.Queue()
@@ -76,14 +77,16 @@ class Detector():
         # Currently centered on post
         
 
-        self.CreateCollPoint(0, 0, 0, 2)
-        self.CreateClearPoint(0, 0, 0, 1, 'post_base')
-        
+        self.CreateCollPoint(0, 0, 0, 5.5, 'post_base')
+        self.CreateClearPoint(2, 0, 0.5, 1.5, 'post_base')
 
-    def CreateCollPoint(self, x, y, z, d):
+        #self.CreateClearPoint(0, 0, 0, 1.1, 'unit_sphere_1')
+        #self.CreateCollPoint(0, 0, 0, 2.0, 'unit_sphere_1')
+
+    def CreateCollPoint(self, x, y, z, d, frame):
 
         p = geometry_msgs.msg.PoseStamped()
-        p.header.frame_id = self.frame
+        p.header.frame_id = frame
 
         p.pose.position.x = x
         p.pose.position.y = y
@@ -91,7 +94,7 @@ class Detector():
 
 
         self.coll_points.append(p)
-        self.coll_distances.append(d*d)
+        self.coll_distances.append(d)
 
         if not self.coll_ids:
             self.coll_ids.append(1)
@@ -109,7 +112,7 @@ class Detector():
 
 
         self.clear_points.append(p)
-        self.clear_distances.append(d*d)
+        self.clear_distances.append(d)
 
         if not self.clear_ids:
             self.clear_ids.append(1)
@@ -144,7 +147,7 @@ class Detector():
             dy = p.pose.position.y - point.pose.position.y
             dz = p.pose.position.z - point.pose.position.z
 
-            dist = dx*dx + dy*dy + dx*dx
+            dist = math.sqrt(dx*dx + dy*dy + dx*dx)
 
             if dist < d:
                 return True
@@ -167,11 +170,14 @@ class Detector():
             clear_points.append(p)
         
         for p, limit, index in zip(self.coll_points, self.coll_distances, self.coll_ids):
+            self.tf.waitForTransform(self.frame, p.header.frame_id, time=rospy.Time.now(), timeout=rospy.Duration(0.5))
+            p = self.tf.transformPose(self.frame, p)
             px = p.pose.position.x
             py = p.pose.position.y
             pz = p.pose.position.z
 
             min_dist = 99999
+            min_point = None
 
             for tp in scan_points:
 
@@ -185,13 +191,19 @@ class Detector():
                     dy = py - ty
                     dz = pz - tz
 
-                    d = dx*dx + dy*dy + dz*dz
+                    d = math.sqrt(dx*dx + dy*dy + dz*dz)
+                    print(d)
 
-                    if d < min_dist:
+                    if d < limit:
                         min_dist = d
+                        min_point = tp
 
-            if min_dist <limit:
+            if min_dist < self.coll_dist:
+                
                 self.TriggerCollision()
+                print(min_dist)
+                print(p)
+                print(min_point)
 
     def TriggerCollision(self):
         print("COLLISION!")
@@ -229,8 +241,9 @@ class Detector():
                     self.ProcessPoints(msg)
                 except tf.ConnectivityException:
                     print("Connectivity Exception")
-                except tf.Exception:
+                except tf.Exception as t:
                     print("TF Exception")
+                    print(t)
 
 if __name__ == "__main__":
     

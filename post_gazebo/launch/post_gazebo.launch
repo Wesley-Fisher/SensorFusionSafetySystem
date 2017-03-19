@@ -13,7 +13,14 @@
 
   <param name="robot_description" command="$(find xacro)/xacro.py $(find post_description)/urdf/post_robot.urdf.xacro" />
 
-  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model post -z 0.0"/>
+  <node name="spawn_urdf1" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model post -z 0.0"/>
+
+
+  <!--
+  <param name="/r12/robot_description" command="$(find xacro)/xacro.py $(find r12_description)/urdf/r12_robot.urdf.xacro" />
+
+  <node name="spawn_urdf2" pkg="gazebo_ros" type="spawn_model" args="-param /r12/robot_description -urdf -model r12 -x 2.0"/>
+-->
 
 
   <!-- We do not have a robot connected, so publish fake joint states -->
